@@ -2,7 +2,7 @@
 
 const { User } = require('./User.model');
 const { Expense } = require('./Expense.model');
-const { Category } = require('./Category.model');
+const { Category } = require('./category.model');
 
 module.exports = {
   models: {
