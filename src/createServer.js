@@ -3,12 +3,14 @@
 const express = require('express');
 const { models } = require('./models/models');
 const { User, Expense, Category } = models;
-const { Op } = require('sequelize');
+const { Op, ValidationError, UniqueConstraintError } = require('sequelize');
 
 function createServer() {
   const app = express();
 
   app.use(express.json());
+
+  // --- users ---
 
   app.get('/users', async (req, res) => {
     try {
@@ -37,10 +39,10 @@ function createServer() {
   });
 
   app.get('/users/:userId', async (req, res) => {
-    const userId = req.params.userId;
+    const userId = Number(req.params.userId);
 
-    if (!userId) {
-      return res.status(400).json({ error: 'Bad request' });
+    if (!Number.isInteger(userId) || userId <= 0) {
+      return res.status(400).json({ error: 'Invalid userId' });
     }
 
     try {
@@ -57,10 +59,10 @@ function createServer() {
   });
 
   app.delete('/users/:userId', async (req, res) => {
-    const userId = req.params.userId;
+    const userId = Number(req.params.userId);
 
-    if (!userId) {
-      return res.status(400).json({ error: 'Bad request' });
+    if (!Number.isInteger(userId) || userId <= 0) {
+      return res.status(400).json({ error: 'Invalid userId' });
     }
 
     try {
@@ -77,8 +79,12 @@ function createServer() {
   });
 
   app.patch('/users/:userId', async (req, res) => {
-    const userId = req.params.userId;
+    const userId = Number(req.params.userId);
     const { name } = req.body;
+
+    if (!Number.isInteger(userId) || userId <= 0) {
+      return res.status(400).json({ error: 'Invalid userId' });
+    }
 
     if (!name) {
       return res.status(400).json({ error: 'Name is required' });
@@ -103,6 +109,8 @@ function createServer() {
       res.status(500).json({ error: 'Internal Server Error' });
     }
   });
+
+  // --- expenses ---
 
   app.get('/expenses', async (req, res) => {
     const { userId, from, to, categories } = req.query;
@@ -154,12 +162,12 @@ function createServer() {
 
     try {
       const newExpense = await Expense.create({
-        userId: userId,
-        spentAt: spentAt,
-        title: title,
-        amount: amount,
-        category: category,
-        note: note,
+        userId,
+        spentAt,
+        title,
+        amount,
+        category,
+        note,
       });
 
       res.status(201).json(newExpense);
@@ -169,10 +177,10 @@ function createServer() {
   });
 
   app.get('/expenses/:expenseId', async (req, res) => {
-    const expenseId = req.params.expenseId;
+    const expenseId = Number(req.params.expenseId);
 
-    if (!expenseId) {
-      return res.status(400).json({ error: 'Bad request' });
+    if (!Number.isInteger(expenseId) || expenseId <= 0) {
+      return res.status(400).json({ error: 'Invalid expenseId' });
     }
 
     try {
@@ -189,7 +197,12 @@ function createServer() {
   });
 
   app.patch('/expenses/:expenseId', async (req, res) => {
-    const expenseId = req.params.expenseId;
+    const expenseId = Number(req.params.expenseId);
+
+    if (!Number.isInteger(expenseId) || expenseId <= 0) {
+      return res.status(400).json({ error: 'Invalid expenseId' });
+    }
+
     const allowedFields = [
       'userId',
       'spentAt',
@@ -199,7 +212,6 @@ function createServer() {
       'note',
     ];
 
-    // Gather only provided, allowed fields
     const updates = {};
 
     allowedFields.forEach((field) => {
@@ -230,10 +242,10 @@ function createServer() {
   });
 
   app.delete('/expenses/:expenseId', async (req, res) => {
-    const expenseId = req.params.expenseId;
+    const expenseId = Number(req.params.expenseId);
 
-    if (!expenseId) {
-      return res.status(400).json({ error: 'Bad request' });
+    if (!Number.isInteger(expenseId) || expenseId <= 0) {
+      return res.status(400).json({ error: 'Invalid expenseId' });
     }
 
     try {
@@ -248,6 +260,8 @@ function createServer() {
       res.status(500).json({ error: 'Internal Server Error' });
     }
   });
+
+  // --- categories ---
 
   app.get('/categories', async (req, res) => {
     try {
@@ -271,12 +285,23 @@ function createServer() {
 
       res.status(201).json(newCategory);
     } catch (err) {
+      if (err instanceof UniqueConstraintError) {
+        return res.status(409).json({ error: 'Category name must be unique' });
+      }
+
+      if (err instanceof ValidationError) {
+        return res.status(400).json({ error: err.message });
+      }
       res.status(500).json({ error: 'Internal Server Error' });
     }
   });
 
   app.get('/categories/:categoryId', async (req, res) => {
-    const categoryId = req.params.categoryId;
+    const categoryId = Number(req.params.categoryId);
+
+    if (!Number.isInteger(categoryId) || categoryId <= 0) {
+      return res.status(400).json({ error: 'Invalid categoryId' });
+    }
 
     try {
       const category = await Category.findByPk(categoryId);
@@ -291,7 +316,12 @@ function createServer() {
   });
 
   app.patch('/categories/:categoryId', async (req, res) => {
-    const categoryId = req.params.categoryId;
+    const categoryId = Number(req.params.categoryId);
+
+    if (!Number.isInteger(categoryId) || categoryId <= 0) {
+      return res.status(400).json({ error: 'Invalid categoryId' });
+    }
+
     const { name } = req.body;
 
     if (!name) {
@@ -312,12 +342,23 @@ function createServer() {
 
       res.status(200).json(updatedCategory);
     } catch (err) {
+      if (err instanceof UniqueConstraintError) {
+        return res.status(409).json({ error: 'Category name must be unique' });
+      }
+
+      if (err instanceof ValidationError) {
+        return res.status(400).json({ error: err.message });
+      }
       res.status(500).json({ error: 'Internal Server Error' });
     }
   });
 
   app.delete('/categories/:categoryId', async (req, res) => {
-    const categoryId = req.params.categoryId;
+    const categoryId = Number(req.params.categoryId);
+
+    if (!Number.isInteger(categoryId) || categoryId <= 0) {
+      return res.status(400).json({ error: 'Invalid categoryId' });
+    }
 
     try {
       const deleted = await Category.destroy({ where: { id: categoryId } });
